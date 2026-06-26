@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="color-scheme" content="light dark">
+    <title>3D 6-Sided Dice - Solid Corners</title>
+    <style>
+        /* CSS Variables - Default Light Theme */
+        :root {
+            --bg-center: #e2e8f0;
+            --bg-edge: #94a3b8;
+            --dice-grad-1: #ffffff;
+            --dice-grad-2: #f8fafc;
+            --dice-border: #cbd5e1;
+            --pip-color: #4f46e5; 
+            --pip-shadow-in: rgba(0,0,0,0.5);
+            --pip-shadow-out: rgba(255,255,255,1);
+            
+            /* Enhanced inner shadow for the illusion of round edges */
+            --dice-inner-shadow: rgba(0,0,0,0.15); 
+            
+            --btn-grad-1: #6366f1;
+            --btn-grad-2: #4338ca;
+            --btn-shadow-main: #312e81;
+
+            --control-bg: rgba(0, 0, 0, 0.08);
+            --control-text: #334155;
+            
+            --floor-shadow: rgba(0, 0, 0, 0.15);
+        }
+
+        /* Dark Theme Variables */
+        [data-theme="dark"] {
+            --bg-center: #1e1b4b; 
+            --bg-edge: #020617;   
+            --dice-grad-1: #1e293b;
+            --dice-grad-2: #0f172a;
+            --dice-border: #334155;
+            --pip-color: #38bdf8; 
+            --pip-shadow-in: rgba(0,0,0,0.9);
+            --pip-shadow-out: rgba(56, 189, 248, 0.2); 
+            
+            /* Enhanced inner shadow for dark mode */
+            --dice-inner-shadow: rgba(0,0,0,0.7);
+
+            --btn-grad-1: #8b5cf6; 
+            --btn-grad-2: #6d28d9;
+            --btn-shadow-main: #4c1d95;
+
+            --control-bg: rgba(255, 255, 255, 0.1);
+            --control-text: #cbd5e1;
+            
+            --floor-shadow: rgba(0, 0, 0, 0.6);
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: radial-gradient(circle at center, var(--bg-center) 0%, var(--bg-edge) 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background 0.4s ease;
+            overflow: hidden; 
+            touch-action: manipulation; 
+        }
+
+        /* Top Controls */
+        .top-controls {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            width: 95%;
+            z-index: 10;
+        }
+
+        .control-btn {
+            background: var(--control-bg);
+            color: var(--control-text);
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: background 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .control-btn:active { transform: scale(0.92); }
+
+        /* Scene Container */
+        .scene-container {
+            position: relative;
+            margin-bottom: 70px;
+            margin-top: 40px;
+        }
+
+        /* 3D Camera / Scene */
+        .scene {
+            width: 120px;
+            height: 120px;
+            perspective: 600px; 
+            z-index: 2;
+            position: relative;
+        }
+
+        /* The rotating cube */
+        .cube {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        /* The Dynamic Floor Shadow */
+        .floor-shadow {
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90px;
+            height: 25px;
+            background: var(--floor-shadow);
+            border-radius: 50%;
+            filter: blur(8px);
+            z-index: 1;
+            transition: width 0.75s ease, opacity 0.75s ease, background 0.4s ease;
+        }
+
+        .shadow-rolling {
+            width: 50px;
+            opacity: 0.4;
+        }
+
+        /* Shared styling for all 6 sides */
+        .face {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--dice-grad-1), var(--dice-grad-2));
+            /* Safe border-radius that prevents hole clipping */
+            border-radius: 12px; 
+            border: 1px solid var(--dice-border);
+            /* Strong inset shadow fakes the roundness perfectly */
+            box-shadow: inset 0 0 20px var(--dice-inner-shadow), 
+                        inset 0 0 5px rgba(255, 255, 255, 0.3);
+            box-sizing: border-box;
+            transition: background 0.4s ease, border 0.4s ease, box-shadow 0.4s ease;
+            
+            display: grid;
+            grid-template-areas: 
+                "tl tc tr"
+                "ml mc mr"
+                "bl bc br";
+            padding: 12px;
+            
+            /* This prevents the back of the faces from shining through */
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+
+        /* Position each of the 6 faces perfectly sealed at 60px */
+        .front  { transform: rotateY(0deg) translateZ(60px); }
+        .back   { transform: rotateY(180deg) translateZ(60px); }
+        .right  { transform: rotateY(90deg) translateZ(60px); }
+        .left   { transform: rotateY(-90deg) translateZ(60px); }
+        .top    { transform: rotateX(90deg) translateZ(60px); }
+        .bottom { transform: rotateX(-90deg) translateZ(60px); }
+
+        .pip {
+            width: 24px;
+            height: 24px;
+            background-color: var(--pip-color);
+            border-radius: 50%;
+            box-shadow: inset 0 4px 6px var(--pip-shadow-in), 0 1px 3px var(--pip-shadow-out);
+            justify-self: center;
+            align-self: center;
+            transition: background-color 0.4s ease, box-shadow 0.4s ease;
+        }
+
+        /* Main Roll Button */
+        .roll-btn {
+            padding: 16px 48px;
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            color: white;
+            background: linear-gradient(135deg, var(--btn-grad-1) 0%, var(--btn-grad-2) 100%);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 8px 0 var(--btn-shadow-main), 0 15px 20px rgba(0,0,0,0.4);
+            transition: all 0.15s ease;
+            text-transform: uppercase;
+            z-index: 5;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .roll-btn:active {
+            transform: translateY(8px);
+            box-shadow: 0 0 0 var(--btn-shadow-main), 0 5px 5px rgba(0,0,0,0.4);
+        }
+
+        .roll-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-controls">
+        <button class="control-btn" id="themeBtn">🌙 Dark</button>
+        <button class="control-btn" id="feedbackBtn">🔕 Mute</button>
+        <button class="control-btn" id="fullscreenBtn">⛶ Fullscreen</button>
+    </div>
+
+    <div class="scene-container">
+        <div class="scene">
+            <div class="cube" id="cube">
+                <div class="face front"><div class="pip" style="grid-area: mc;"></div></div>
+                <div class="face back">
+                    <div class="pip" style="grid-area: tl;"></div><div class="pip" style="grid-area: ml;"></div>
+                    <div class="pip" style="grid-area: bl;"></div><div class="pip" style="grid-area: tr;"></div>
+                    <div class="pip" style="grid-area: mr;"></div><div class="pip" style="grid-area: br;"></div>
+                </div>
+                <div class="face right">
+                    <div class="pip" style="grid-area: tr;"></div><div class="pip" style="grid-area: mc;"></div>
+                    <div class="pip" style="grid-area: bl;"></div>
+                </div>
+                <div class="face left">
+                    <div class="pip" style="grid-area: tl;"></div><div class="pip" style="grid-area: tr;"></div>
+                    <div class="pip" style="grid-area: bl;"></div><div class="pip" style="grid-area: br;"></div>
+                </div>
+                <div class="face top">
+                    <div class="pip" style="grid-area: tr;"></div><div class="pip" style="grid-area: bl;"></div>
+                </div>
+                <div class="face bottom">
+                    <div class="pip" style="grid-area: tl;"></div><div class="pip" style="grid-area: tr;"></div>
+                    <div class="pip" style="grid-area: mc;"></div><div class="pip" style="grid-area: bl;"></div>
+                    <div class="pip" style="grid-area: br;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="floor-shadow" id="floorShadow"></div>
+    </div> 
+    
+    <button class="roll-btn" id="rollBtn">Roll Dice</button>
+
+    <script>
+        const cube = document.getElementById('cube');
+        const rollBtn = document.getElementById('rollBtn');
+        const themeBtn = document.getElementById('themeBtn');
+        const feedbackBtn = document.getElementById('feedbackBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const floorShadow = document.getElementById('floorShadow');
+
+        // --- THEME TOGGLE ---
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.body.setAttribute('data-theme', 'dark');
+            themeBtn.innerText = '☀️ Light';
+        }
+        themeBtn.addEventListener('click', () => {
+            if (document.body.getAttribute('data-theme') === 'dark') {
+                document.body.removeAttribute('data-theme');
+                themeBtn.innerText = '🌙 Dark';
+            } else {
+                document.body.setAttribute('data-theme', 'dark');
+                themeBtn.innerText = '☀️ Light';
+            }
+        });
+
+        // --- FULLSCREEN TOGGLE ---
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen();
+            }
+        });
+        document.addEventListener('fullscreenchange', () => {
+            fullscreenBtn.innerText = document.fullscreenElement ? '✖ Exit' : '⛶ Fullscreen';
+        });
+
+        // --- FEEDBACK LOGIC ---
+        let feedbackMode = 'mute'; 
+        let audioCtx;
+
+        function playSynthesizedSound(type) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            const now = audioCtx.currentTime;
+
+            if (type === 'start') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
+                gainNode.gain.setValueAtTime(0.1, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'rattle') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(400 + Math.random() * 200, now);
+                gainNode.gain.setValueAtTime(0.04, now); 
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+                osc.start(now);
+                osc.stop(now + 0.02);
+            } else if (type === 'land') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+                
+                setTimeout(() => {
+                    const osc2 = audioCtx.createOscillator();
+                    const gain2 = audioCtx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(audioCtx.destination);
+                    osc2.type = 'square';
+                    osc2.frequency.setValueAtTime(200, audioCtx.currentTime);
+                    gain2.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                    osc2.start(audioCtx.currentTime);
+                    osc2.stop(audioCtx.currentTime + 0.1);
+                }, 80);
+            }
+        }
+
+        feedbackBtn.addEventListener('click', () => {
+            if (feedbackMode === 'mute') {
+                feedbackMode = 'haptic';
+                feedbackBtn.innerText = '📳 Vibrate';
+            } else if (feedbackMode === 'haptic') {
+                feedbackMode = 'sound';
+                feedbackBtn.innerText = '🔊 Sound';
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            } else {
+                feedbackMode = 'mute';
+                feedbackBtn.innerText = '🔕 Mute';
+            }
+        });
+
+        // --- DICE ROLLING PHYSICS LOGIC ---
+        const faceAngles = {
+            1: { x: 0, y: 0 },
+            6: { x: 0, y: 180 },
+            3: { x: 0, y: -90 },
+            4: { x: 0, y: 90 },
+            2: { x: -90, y: 0 },
+            5: { x: 90, y: 0 }
+        };
+
+        let currentRotX = -25;
+        let currentRotY = -25;
+        
+        cube.style.transform = `rotateX(${currentRotX}deg) rotateY(${currentRotY}deg)`;
+
+        function easeOutQuart(x) {
+            return 1 - Math.pow(1 - x, 4);
+        }
+
+        rollBtn.addEventListener('click', () => {
+            rollBtn.disabled = true;
+            floorShadow.classList.add('shadow-rolling');
+
+            if (feedbackMode === 'haptic' && navigator.vibrate) navigator.vibrate(40);
+            else if (feedbackMode === 'sound') playSynthesizedSound('start');
+
+            const result = Math.floor(Math.random() * 6) + 1;
+            
+            const startX = currentRotX;
+            const startY = currentRotY;
+
+            const targetX = startX + (Math.floor(Math.random() * 3) + 3) * 360 + faceAngles[result].x - (startX % 360);
+            const targetY = startY + (Math.floor(Math.random() * 3) + 3) * 360 + faceAngles[result].y - (startY % 360);
+
+            const animationDuration = 1600; 
+            let startTime = null;
+            let lastRattleTotal = 0;
+
+            function animateRoll(currentTime) {
+                if (!startTime) startTime = currentTime;
+                const elapsed = currentTime - startTime;
+                
+                let progress = Math.min(elapsed / animationDuration, 1);
+                let easedProgress = easeOutQuart(progress);
+
+                currentRotX = startX + (targetX - startX) * easedProgress;
+                currentRotY = startY + (targetY - startY) * easedProgress;
+                
+                cube.style.transform = `rotateX(${currentRotX}deg) rotateY(${currentRotY}deg)`;
+
+                let totalMoved = Math.abs(currentRotX - startX) + Math.abs(currentRotY - startY);
+                
+                if (totalMoved - lastRattleTotal > 100) {
+                    lastRattleTotal = totalMoved;
+                    
+                    if (feedbackMode === 'sound') {
+                        playSynthesizedSound('rattle');
+                    } else if (feedbackMode === 'haptic' && navigator.vibrate) {
+                        navigator.vibrate(10); 
+                    }
+                }
+
+                if (progress < 1) {
+                    requestAnimationFrame(animateRoll);
+                } else {
+                    rollBtn.disabled = false;
+                    floorShadow.classList.remove('shadow-rolling');
+
+                    if (feedbackMode === 'haptic' && navigator.vibrate) {
+                        navigator.vibrate([80, 40, 40]);
+                    } else if (feedbackMode === 'sound') {
+                        playSynthesizedSound('land');
+                    }
+                }
+            }
+
+            requestAnimationFrame(animateRoll);
+        });
+    </script>
+</body>
+</html>

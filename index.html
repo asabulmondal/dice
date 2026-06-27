@@ -60,6 +60,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            height: 100dvh; /* Modern mobile fix */
             margin: 0;
             background: radial-gradient(circle at center, var(--bg-center) 0%, var(--bg-edge) 100%);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -117,12 +118,21 @@
             position: relative;
         }
 
+        /* NEW: Wrapper to handle the vertical jump independently of the spinning */
+        .jump-wrapper {
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            will-change: transform;
+        }
+
         /* The rotating cube */
         .cube {
             width: 100%;
             height: 100%;
             position: relative;
             transform-style: preserve-3d;
+            will-change: transform;
         }
 
         /* The Dynamic Floor Shadow */
@@ -137,12 +147,8 @@
             border-radius: 50%;
             filter: blur(8px);
             z-index: 1;
-            transition: width 0.75s ease, opacity 0.75s ease, background 0.4s ease;
-        }
-
-        .shadow-rolling {
-            width: 50px;
-            opacity: 0.4;
+            will-change: transform, opacity, filter;
+            /* Removed CSS transition because JS will animate this frame-by-frame during the jump */
         }
 
         /* Shared styling for all 6 sides */
@@ -231,28 +237,30 @@
 
     <div class="scene-container">
         <div class="scene">
-            <div class="cube" id="cube">
-                <div class="face front"><div class="pip" style="grid-area: mc;"></div></div>
-                <div class="face back">
-                    <div class="pip" style="grid-area: tl;"></div><div class="pip" style="grid-area: ml;"></div>
-                    <div class="pip" style="grid-area: bl;"></div><div class="pip" style="grid-area: tr;"></div>
-                    <div class="pip" style="grid-area: mr;"></div><div class="pip" style="grid-area: br;"></div>
-                </div>
-                <div class="face right">
-                    <div class="pip" style="grid-area: tr;"></div><div class="pip" style="grid-area: mc;"></div>
-                    <div class="pip" style="grid-area: bl;"></div>
-                </div>
-                <div class="face left">
-                    <div class="pip" style="grid-area: tl;"></div><div class="pip" style="grid-area: tr;"></div>
-                    <div class="pip" style="grid-area: bl;"></div><div class="pip" style="grid-area: br;"></div>
-                </div>
-                <div class="face top">
-                    <div class="pip" style="grid-area: tr;"></div><div class="pip" style="grid-area: bl;"></div>
-                </div>
-                <div class="face bottom">
-                    <div class="pip" style="grid-area: tl;"></div><div class="pip" style="grid-area: tr;"></div>
-                    <div class="pip" style="grid-area: mc;"></div><div class="pip" style="grid-area: bl;"></div>
-                    <div class="pip" style="grid-area: br;"></div>
+            <div class="jump-wrapper" id="jumpWrapper">
+                <div class="cube" id="cube">
+                    <div class="face front"><div class="pip" style="grid-area: mc;"></div></div>
+                    <div class="face back">
+                        <div class="pip" style="grid-area: tl;"></div><div class="pip" style="grid-area: ml;"></div>
+                        <div class="pip" style="grid-area: bl;"></div><div class="pip" style="grid-area: tr;"></div>
+                        <div class="pip" style="grid-area: mr;"></div><div class="pip" style="grid-area: br;"></div>
+                    </div>
+                    <div class="face right">
+                        <div class="pip" style="grid-area: tr;"></div><div class="pip" style="grid-area: mc;"></div>
+                        <div class="pip" style="grid-area: bl;"></div>
+                    </div>
+                    <div class="face left">
+                        <div class="pip" style="grid-area: tl;"></div><div class="pip" style="grid-area: tr;"></div>
+                        <div class="pip" style="grid-area: bl;"></div><div class="pip" style="grid-area: br;"></div>
+                    </div>
+                    <div class="face top">
+                        <div class="pip" style="grid-area: tr;"></div><div class="pip" style="grid-area: bl;"></div>
+                    </div>
+                    <div class="face bottom">
+                        <div class="pip" style="grid-area: tl;"></div><div class="pip" style="grid-area: tr;"></div>
+                        <div class="pip" style="grid-area: mc;"></div><div class="pip" style="grid-area: bl;"></div>
+                        <div class="pip" style="grid-area: br;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -263,25 +271,48 @@
 
     <script>
         const cube = document.getElementById('cube');
+        const jumpWrapper = document.getElementById('jumpWrapper');
         const rollBtn = document.getElementById('rollBtn');
         const themeBtn = document.getElementById('themeBtn');
         const feedbackBtn = document.getElementById('feedbackBtn');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
         const floorShadow = document.getElementById('floorShadow');
 
-        // --- THEME TOGGLE ---
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.body.setAttribute('data-theme', 'dark');
-            themeBtn.innerText = '☀️ Light';
-        }
-        themeBtn.addEventListener('click', () => {
-            if (document.body.getAttribute('data-theme') === 'dark') {
-                document.body.removeAttribute('data-theme');
-                themeBtn.innerText = '🌙 Dark';
-            } else {
+        // --- SECURE LOCAL STORAGE (Prevents Android content:// crashes) ---
+        const safeStorage = {
+            get: (key) => { try { return localStorage.getItem(key); } catch(e) { return null; } },
+            set: (key, value) => { try { localStorage.setItem(key, value); } catch(e) { } }
+        };
+
+        // --- SYSTEM THEME SYNC ---
+        const sysDarkPref = window.matchMedia('(prefers-color-scheme: dark)');
+        let currentTheme = safeStorage.get('dice-theme');
+
+        function applyTheme(theme) {
+            if (theme === 'dark') {
                 document.body.setAttribute('data-theme', 'dark');
                 themeBtn.innerText = '☀️ Light';
+            } else {
+                document.body.removeAttribute('data-theme');
+                themeBtn.innerText = '🌙 Dark';
             }
+        }
+
+        // Initialize theme
+        if (currentTheme) applyTheme(currentTheme);
+        else applyTheme(sysDarkPref.matches ? 'dark' : 'light');
+
+        // Listen for system changes
+        sysDarkPref.addEventListener('change', (e) => {
+            if (!safeStorage.get('dice-theme')) applyTheme(e.matches ? 'dark' : 'light');
+        });
+
+        // Manual Toggle
+        themeBtn.addEventListener('click', () => {
+            const isDark = document.body.hasAttribute('data-theme');
+            currentTheme = isDark ? 'light' : 'dark';
+            applyTheme(currentTheme);
+            safeStorage.set('dice-theme', currentTheme);
         });
 
         // --- FULLSCREEN TOGGLE ---
@@ -296,9 +327,16 @@
             fullscreenBtn.innerText = document.fullscreenElement ? '✖ Exit' : '⛶ Fullscreen';
         });
 
-        // --- FEEDBACK LOGIC ---
-        let feedbackMode = 'mute'; 
+        // --- FEEDBACK LOGIC (With Local Storage Sync) ---
+        let feedbackMode = safeStorage.get('dice-feedback') || 'mute'; 
         let audioCtx;
+
+        function updateFeedbackUI() {
+            if (feedbackMode === 'mute') feedbackBtn.innerText = '🔕 Mute';
+            else if (feedbackMode === 'haptic') feedbackBtn.innerText = '📳 Vibrate';
+            else feedbackBtn.innerText = '🔊 Sound';
+        }
+        updateFeedbackUI();
 
         function playSynthesizedSound(type) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -352,18 +390,27 @@
         }
 
         feedbackBtn.addEventListener('click', () => {
-            if (feedbackMode === 'mute') {
-                feedbackMode = 'haptic';
-                feedbackBtn.innerText = '📳 Vibrate';
-            } else if (feedbackMode === 'haptic') {
+            if (feedbackMode === 'mute') feedbackMode = 'haptic';
+            else if (feedbackMode === 'haptic') {
                 feedbackMode = 'sound';
-                feedbackBtn.innerText = '🔊 Sound';
                 if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            } else {
-                feedbackMode = 'mute';
-                feedbackBtn.innerText = '🔕 Mute';
-            }
+            } else feedbackMode = 'mute';
+            
+            safeStorage.set('dice-feedback', feedbackMode);
+            updateFeedbackUI();
         });
+
+        // --- CRYPTOGRAPHIC RANDOMNESS ---
+        function getSecureRandom() {
+            try {
+                const array = new Uint32Array(1);
+                window.crypto.getRandomValues(array);
+                return (array[0] % 6) + 1;
+            } catch(e) {
+                // Fallback for extremely old browsers
+                return Math.floor(Math.random() * 6) + 1;
+            }
+        }
 
         // --- DICE ROLLING PHYSICS LOGIC ---
         const faceAngles = {
@@ -386,12 +433,11 @@
 
         rollBtn.addEventListener('click', () => {
             rollBtn.disabled = true;
-            floorShadow.classList.add('shadow-rolling');
 
             if (feedbackMode === 'haptic' && navigator.vibrate) navigator.vibrate(40);
             else if (feedbackMode === 'sound') playSynthesizedSound('start');
 
-            const result = Math.floor(Math.random() * 6) + 1;
+            const result = getSecureRandom();
             
             const startX = currentRotX;
             const startY = currentRotY;
@@ -402,6 +448,7 @@
             const animationDuration = 1600; 
             let startTime = null;
             let lastRattleTotal = 0;
+            const jumpHeight = 100; // Pixels it leaps into the air
 
             function animateRoll(currentTime) {
                 if (!startTime) startTime = currentTime;
@@ -410,10 +457,23 @@
                 let progress = Math.min(elapsed / animationDuration, 1);
                 let easedProgress = easeOutQuart(progress);
 
+                // Apply Spin
                 currentRotX = startX + (targetX - startX) * easedProgress;
                 currentRotY = startY + (targetY - startY) * easedProgress;
-                
                 cube.style.transform = `rotateX(${currentRotX}deg) rotateY(${currentRotY}deg)`;
+
+                // Apply Vertical Jump (Parabola)
+                let yOffset = Math.sin(progress * Math.PI) * -jumpHeight;
+                if (yOffset > 0) yOffset = 0; // Prevent dipping below floor
+                jumpWrapper.style.transform = `translateY(${yOffset}px)`;
+
+                // Apply Dynamic Shadow
+                let shadowScale = 1 - (Math.sin(progress * Math.PI) * 0.4);
+                let shadowOpacity = 1 - (Math.sin(progress * Math.PI) * 0.6);
+                let shadowBlur = 8 + (Math.sin(progress * Math.PI) * 10);
+                floorShadow.style.transform = `translateX(-50%) scale(${shadowScale})`;
+                floorShadow.style.opacity = shadowOpacity;
+                floorShadow.style.filter = `blur(${shadowBlur}px)`;
 
                 let totalMoved = Math.abs(currentRotX - startX) + Math.abs(currentRotY - startY);
                 
@@ -431,7 +491,6 @@
                     requestAnimationFrame(animateRoll);
                 } else {
                     rollBtn.disabled = false;
-                    floorShadow.classList.remove('shadow-rolling');
 
                     if (feedbackMode === 'haptic' && navigator.vibrate) {
                         navigator.vibrate([80, 40, 40]);
@@ -445,4 +504,5 @@
         });
     </script>
 </body>
-</html>
+                    </html>
+    

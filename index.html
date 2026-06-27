@@ -6,43 +6,49 @@
     <meta name="color-scheme" content="light dark">
     <title>3D Dice Roller</title>
     <style>
-        /* CSS Variables - Default Light Theme */
+        /* CSS Variables - High Contrast Light Theme */
         :root {
-            --bg-center: #e2e8f0;
-            --bg-edge: #94a3b8;
-            --dice-grad-1: #ffffff;
-            --dice-grad-2: #f8fafc;
-            --dice-border: #cbd5e1;
+            /* Clearer, brighter blue-slate background to remove the hazy (abcha) look */
+            --bg-center: #d2e4f6;
+            --bg-edge: #4a658a;
+            
+            /* Bright, clean ivory/bone white (no muddy yellow/brown tones) */
+            --dice-grad-1: #ffffff; 
+            --dice-grad-2: #fff5e6; 
+            --dice-border: #f2dfc9; 
+            
             --pip-color: #4f46e5; 
             --pip-shadow-in: rgba(0,0,0,0.5);
             --pip-shadow-out: rgba(255,255,255,1);
             
-            /* Enhanced inner shadow for the illusion of round edges */
-            --dice-inner-shadow: rgba(0,0,0,0.15); 
+            /* Warm-tinted inner shadow so the white doesn't look ashy/dirty */
+            --dice-inner-shadow: rgba(130, 90, 50, 0.12); 
             
             --btn-grad-1: #6366f1;
             --btn-grad-2: #4338ca;
             --btn-shadow-main: #312e81;
 
-            --control-bg: rgba(0, 0, 0, 0.08);
-            --control-text: #334155;
+            --control-bg: rgba(255, 255, 255, 0.5);
+            --control-text: #1e293b;
             
-            --floor-shadow: rgba(0, 0, 0, 0.15);
+            --floor-shadow: rgba(0, 0, 0, 0.25);
         }
 
-        /* Dark Theme Variables */
+        /* High Contrast Dark Theme */
         [data-theme="dark"] {
             --bg-center: #1e1b4b; 
             --bg-edge: #020617;   
-            --dice-grad-1: #1e293b;
-            --dice-grad-2: #0f172a;
-            --dice-border: #334155;
+            
+            /* Cleaner slate for dark mode to prevent dullness */
+            --dice-grad-1: #2a364a;
+            --dice-grad-2: #151e2e;
+            --dice-border: #475569;
+            
             --pip-color: #38bdf8; 
             --pip-shadow-in: rgba(0,0,0,0.9);
-            --pip-shadow-out: rgba(56, 189, 248, 0.2); 
+            --pip-shadow-out: rgba(56, 189, 248, 0.15); 
             
-            /* Enhanced inner shadow for dark mode */
-            --dice-inner-shadow: rgba(0,0,0,0.7);
+            --dice-inner-shadow: rgba(0,0,0,0.5);
 
             --btn-grad-1: #8b5cf6; 
             --btn-grad-2: #6d28d9;
@@ -51,7 +57,7 @@
             --control-bg: rgba(255, 255, 255, 0.1);
             --control-text: #cbd5e1;
             
-            --floor-shadow: rgba(0, 0, 0, 0.6);
+            --floor-shadow: rgba(0, 0, 0, 0.7);
         }
 
         body {
@@ -504,5 +510,4 @@
         });
     </script>
 </body>
-                    </html>
-    
+</html>

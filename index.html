@@ -8,21 +8,21 @@
     <style>
         /* CSS Variables - High Contrast Light Theme */
         :root {
-            /* Clearer, brighter blue-slate background to remove the hazy (abcha) look */
+            /* Background remains exactly as you liked it */
             --bg-center: #d2e4f6;
             --bg-edge: #4a658a;
             
-            /* Bright, clean ivory/bone white (no muddy yellow/brown tones) */
+            /* Clean Ivory/Bone white. Smoother gradient prevents the "stained" look */
             --dice-grad-1: #ffffff; 
-            --dice-grad-2: #fff5e6; 
-            --dice-border: #f2dfc9; 
+            --dice-grad-2: #f5efe6; 
+            --dice-border: #e8dfd5; 
             
             --pip-color: #4f46e5; 
             --pip-shadow-in: rgba(0,0,0,0.5);
             --pip-shadow-out: rgba(255,255,255,1);
             
-            /* Warm-tinted inner shadow so the white doesn't look ashy/dirty */
-            --dice-inner-shadow: rgba(130, 90, 50, 0.12); 
+            /* Reverted to a pure black alpha shadow. Colored shadows on white look like dirt! */
+            --dice-inner-shadow: rgba(0, 0, 0, 0.06); 
             
             --btn-grad-1: #6366f1;
             --btn-grad-2: #4338ca;
@@ -39,7 +39,6 @@
             --bg-center: #1e1b4b; 
             --bg-edge: #020617;   
             
-            /* Cleaner slate for dark mode to prevent dullness */
             --dice-grad-1: #2a364a;
             --dice-grad-2: #151e2e;
             --dice-border: #475569;
@@ -66,7 +65,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            height: 100dvh; /* Modern mobile fix */
+            height: 100dvh; 
             margin: 0;
             background: radial-gradient(circle at center, var(--bg-center) 0%, var(--bg-edge) 100%);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -124,7 +123,6 @@
             position: relative;
         }
 
-        /* NEW: Wrapper to handle the vertical jump independently of the spinning */
         .jump-wrapper {
             width: 100%;
             height: 100%;
@@ -132,7 +130,6 @@
             will-change: transform;
         }
 
-        /* The rotating cube */
         .cube {
             width: 100%;
             height: 100%;
@@ -154,7 +151,6 @@
             filter: blur(8px);
             z-index: 1;
             will-change: transform, opacity, filter;
-            /* Removed CSS transition because JS will animate this frame-by-frame during the jump */
         }
 
         /* Shared styling for all 6 sides */
@@ -163,10 +159,8 @@
             width: 120px;
             height: 120px;
             background: linear-gradient(135deg, var(--dice-grad-1), var(--dice-grad-2));
-            /* Safe border-radius that prevents hole clipping */
             border-radius: 12px; 
             border: 1px solid var(--dice-border);
-            /* Strong inset shadow fakes the roundness perfectly */
             box-shadow: inset 0 0 20px var(--dice-inner-shadow), 
                         inset 0 0 5px rgba(255, 255, 255, 0.3);
             box-sizing: border-box;
@@ -179,7 +173,6 @@
                 "bl bc br";
             padding: 12px;
             
-            /* This prevents the back of the faces from shining through */
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
         }
@@ -284,13 +277,11 @@
         const fullscreenBtn = document.getElementById('fullscreenBtn');
         const floorShadow = document.getElementById('floorShadow');
 
-        // --- SECURE LOCAL STORAGE (Prevents Android content:// crashes) ---
         const safeStorage = {
             get: (key) => { try { return localStorage.getItem(key); } catch(e) { return null; } },
             set: (key, value) => { try { localStorage.setItem(key, value); } catch(e) { } }
         };
 
-        // --- SYSTEM THEME SYNC ---
         const sysDarkPref = window.matchMedia('(prefers-color-scheme: dark)');
         let currentTheme = safeStorage.get('dice-theme');
 
@@ -304,16 +295,13 @@
             }
         }
 
-        // Initialize theme
         if (currentTheme) applyTheme(currentTheme);
         else applyTheme(sysDarkPref.matches ? 'dark' : 'light');
 
-        // Listen for system changes
         sysDarkPref.addEventListener('change', (e) => {
             if (!safeStorage.get('dice-theme')) applyTheme(e.matches ? 'dark' : 'light');
         });
 
-        // Manual Toggle
         themeBtn.addEventListener('click', () => {
             const isDark = document.body.hasAttribute('data-theme');
             currentTheme = isDark ? 'light' : 'dark';
@@ -321,7 +309,6 @@
             safeStorage.set('dice-theme', currentTheme);
         });
 
-        // --- FULLSCREEN TOGGLE ---
         fullscreenBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(() => {});
@@ -333,7 +320,6 @@
             fullscreenBtn.innerText = document.fullscreenElement ? '✖ Exit' : '⛶ Fullscreen';
         });
 
-        // --- FEEDBACK LOGIC (With Local Storage Sync) ---
         let feedbackMode = safeStorage.get('dice-feedback') || 'mute'; 
         let audioCtx;
 
@@ -406,19 +392,16 @@
             updateFeedbackUI();
         });
 
-        // --- CRYPTOGRAPHIC RANDOMNESS ---
         function getSecureRandom() {
             try {
                 const array = new Uint32Array(1);
                 window.crypto.getRandomValues(array);
                 return (array[0] % 6) + 1;
             } catch(e) {
-                // Fallback for extremely old browsers
                 return Math.floor(Math.random() * 6) + 1;
             }
         }
 
-        // --- DICE ROLLING PHYSICS LOGIC ---
         const faceAngles = {
             1: { x: 0, y: 0 },
             6: { x: 0, y: 180 },
@@ -454,7 +437,7 @@
             const animationDuration = 1600; 
             let startTime = null;
             let lastRattleTotal = 0;
-            const jumpHeight = 100; // Pixels it leaps into the air
+            const jumpHeight = 100; 
 
             function animateRoll(currentTime) {
                 if (!startTime) startTime = currentTime;
@@ -463,17 +446,14 @@
                 let progress = Math.min(elapsed / animationDuration, 1);
                 let easedProgress = easeOutQuart(progress);
 
-                // Apply Spin
                 currentRotX = startX + (targetX - startX) * easedProgress;
                 currentRotY = startY + (targetY - startY) * easedProgress;
                 cube.style.transform = `rotateX(${currentRotX}deg) rotateY(${currentRotY}deg)`;
 
-                // Apply Vertical Jump (Parabola)
                 let yOffset = Math.sin(progress * Math.PI) * -jumpHeight;
-                if (yOffset > 0) yOffset = 0; // Prevent dipping below floor
+                if (yOffset > 0) yOffset = 0; 
                 jumpWrapper.style.transform = `translateY(${yOffset}px)`;
 
-                // Apply Dynamic Shadow
                 let shadowScale = 1 - (Math.sin(progress * Math.PI) * 0.4);
                 let shadowOpacity = 1 - (Math.sin(progress * Math.PI) * 0.6);
                 let shadowBlur = 8 + (Math.sin(progress * Math.PI) * 10);
